@@ -1,27 +1,82 @@
-from flask import Flask
+import functools
+
+from flask import Flask, render_template, request, session, redirect, url_for
 from flask.ext.mongokit import MongoKit
-from models import Entry, Feed, TotalCount, Token
-import datetime
+from models import Entry, Feed, User, GoodToken, BadToken
+import requests
+import json
 
 app = Flask(__name__)
 app.config.from_object('config')
 
 db = MongoKit(app)
-db.register([Entry, Feed, TotalCount, Token])
+db.register([Entry, Feed, User, GoodToken, BadToken])
+
+def login_required(view):
+    @functools.wraps(view)
+    def decorated_view(*args, **kwargs):
+        user_id = session.get('user_id')
+        if not user_id:
+            return redirect(url_for('index'))
+        user = db.User.get_from_id(user_id)
+        return view(user=user, *args, **kwargs)
+    return decorated_view
 
 @app.route('/')
 def index():
-    entry = db.Entry()
-    entry.title = u'foo'
-    entry.url = u'http://example.com'
-    entry.description = u'Foo description'
-    entry.published = datetime.datetime.now()
-    entry.date_added = datetime.datetime.now()
-    entry.save()
-    return 'Surprise'
+    user_id = session.get('user_id')
+    if not user_id:
+        user = None
+    else:
+        user = db.User.get_from_id(user_id)
+
+    return render_template('index.html', user=user)
+
+@app.route('/logout')
+def logout():
+    session.pop('user_id')
+    return redirect(url_for('index'))
+
+@app.route('/login')
+def login():
+    code = request.args.get('code')
+    data = {
+        'app_id': app.config['CLEF_APP_ID'],
+        'app_secret': app.config['CLEF_APP_SECRET'],
+        'code': code
+    }
+    response = requests.post('https://clef.io/api/v1/authorize', data=data)
+    json_response = json.loads(response.text)
+
+    if json_response.get('error'):
+        return json_response['error']
+
+    token = json_response['access_token']
+    response = requests.get('https://clef.io/api/v1/info?access_token=%s' % token)
+    json_response = json.loads(response.text)
+
+    if json_response.get('error'):
+        return json_response['error']
+
+    user_info = json_response['info']
+
+    # Look up the user
+    user = db.User.find_one({'clef_id': user_info['id']})
+    if not user:
+        user = db.User()
+        user.email = user_info['email']
+        user.first_name = user_info['first_name']
+        user.clef_id = user_info['id']
+        user.feeds = []
+
+        user.save()
+
+    session['user_id'] = user._id
+    return redirect(url_for('index'))
+
 
 @app.route('/test')
-def test():
+def test(user=None):
     entries = db.Entry.find()
     return repr([entry for entry in entries])
 

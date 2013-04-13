@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width" />
+
+        <title>{% block title %}Radar{% endblock %}</title>
+        <link rel="stylesheet" href="/static/css/normalize.css" />
+        <link rel="stylesheet" href="/static/css/foundation.css" />
+        <script src="/static/js/vendor/custom.modernizr.js"></script>
+        {% block script %}{% endblock %}
+    </head>
+
+    <body>
+            <nav class="top-bar">
+                <ul class="title-area">
+                    <!-- Title Area -->
+                    <li class="name"><h1><a href="#">Radar</a></h1></li>
+                    <li class="toggle-topbar"><a href="#"><span>Menu</span></a></li>
+                </ul>
+                <section class="top-bar-section">
+                <ul class="right">
+                    <li class="divider hide-for-small"></li>
+                    <li class="has-form">
+                        {% if user %}
+                        <a href="{{ url_for('logout') }}">Hello, {{ user.first_name }}.</a>
+                        {% else %}
+                        <script type="text/javascript" src="https://clef.io/v2/clef.js" class="clef-button" data-app-id="94104bf883783f1935c2ebe8547007d4" data-color="blue" data-style="flat" data-redirect-url="http://localhost:5000/login"></script>
+                        {% endif %}
+                    </li>
+                </ul>
+                </section>
+            </nav>
+        {% block content %}
+        {% endblock %}
+
+        <script>
+            document.write('<script src=' +
+                ('__proto__' in {} ? '/static/js/vendor/zepto' : '/static/js/vendor/jquery') +
+                '.js><\/script>')
+        </script>
+
+        <script src="/static/js/foundation.min.js"></script>
+        <script>
+            $(document).foundation();
+        </script>
+    </body>
+</html>

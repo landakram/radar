@@ -29,11 +29,15 @@ class Feed(Document):
     use_dot_notation = True
 
 class User(Document):
+    __collection__ = 'users'
+
     structure = {
         'email': unicode,
         'first_name': unicode,
-        'feeds': [Feed]
+        'feeds': [Feed],
+        'clef_id': int
     }
+
     use_dot_notation = True
 
 class GoodToken(Document):
