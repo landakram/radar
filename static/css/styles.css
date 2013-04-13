@@ -142,3 +142,21 @@ body {
 .clear {
   clear: both;
 }
+
+.keyword{
+  display: inline-block;
+  background: rgb(254,254,254);
+  padding: 0.2em 0.5em;
+  margin-top:0.5em;
+  color: #AAA;
+   /* -webkit-border-radius: 5px;
+     -khtml-border-radius: 5px;
+       -moz-border-radius: 5px;
+        -ms-border-radius: 5px;
+            border-radius: 5px;*/
+}
+
+.keyword:hover{
+  color: #333;
+  cursor: pointer;
+}
