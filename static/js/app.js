@@ -23,27 +23,52 @@ $( function () {
 		})
 	});
 
+	function like_keyword(e) {
+		var keyword = $(this),
+			params = {keyword: keyword.text(), bad: 0};
+		$.post('/keyword', params, function (response) {
+			// console.log("Hello");
+			var heart_div = $("<div><img src='"+heart+"'></div>").appendTo($("body"));
+			heart_div.css({
+				position:"absolute",
+				opacity:0.9
+			});
+			heart_div.offset({
+				left:e.pageX-25,
+				top:e.pageY-15
+			});
+			heart_div.animate({opacity:0}, 700, function () {
+				$(this).remove()
+			});
+		});
+	}
+
+	$(".entry-content").each( function () {
+		var keywordable_elements = [],
+			split_text = $(this).text().split(' ');
+		// console.log(split_text);
+		$.each(split_text, function () {
+			keywordable_elements.push("<span class='hoverable_keyword'>"+this+"</span>");
+		});
+		// $(this).html('');
+		// var paragraph = $(this);
+		// $.each(keywordable_elements, function () {
+			// paragraph.append(" "+this);
+		// });
+
+		$(this).html(keywordable_elements.join(" "));
+		$(this).find("span").each( function () {
+			$(this).click( function (e) {
+				like_keyword(e);
+			});
+		});
+	});
+
 
 	$(".keyword").each( function () {
 
 		$(this).click( function (e) {
-			var keyword = $(this),
-				params = {keyword: keyword.text(), bad: 0};
-			$.post('/keyword', params, function (response) {
-				// console.log("Hello");
-				var heart_div = $("<div><img src='"+heart+"'></div>").appendTo($("body"));
-				heart_div.css({
-					position:"absolute",
-					opacity:0.9
-				});
-				heart_div.offset({
-					left:e.pageX-25,
-					top:e.pageY-15
-				});
-				heart_div.animate({opacity:0}, 700, function () {
-					$(this).remove()
-				});
-			});
+			like_keyword(e);
 		});
 		
 	});
