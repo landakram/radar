@@ -42,7 +42,7 @@ def add_good_keyword(user=None):
         g_token['count'] = 0
         g_token['user_id'] = user._id
 
-    g_token['count'] += 1
+    g_token['count'] += 3
     g_token.save()
     return jsonify(success=True)
 
