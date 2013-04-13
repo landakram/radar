@@ -24,6 +24,8 @@ def update_feed(feed):
     filtered = [create_entry(parser=e) for e in filtered_entries]
     # Cut off at 100 entries
     feed['entries'] = (filtered + feed['entries'])[:100]
+    feed['entries'][0]['date_added'] = datetime.datetime.now()
+
 
 def create_feed(*args, **kwargs):
     # parse the url from the arguments
