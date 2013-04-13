@@ -1,6 +1,6 @@
 import functools
 
-from flask import Flask, render_template, request, session, redirect, url_for
+from flask import Flask, render_template, request, session, redirect, url_for, jsonify
 from mongokit import ObjectId
 import requests
 import operator as op
@@ -44,6 +44,7 @@ def add_good_keyword(user=None):
 
     g_token['count'] += 1
     g_token.save()
+    return jsonify(success=True)
 
 @app.route('/')
 def index():
