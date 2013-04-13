@@ -1,6 +1,6 @@
 import functools
 
-from flask import Flask, render_template, request, session, redirect, url_for, jsonify, Response
+from flask import Flask, render_template, request, session, redirect, url_for
 from flask.ext.mongokit import MongoKit
 from mongokit import ObjectId
 from models import Entry, Feed, User, GoodToken, BadToken
@@ -40,6 +40,7 @@ def index():
         if user:
             for feed in user.feeds:
                 for entry in feed['entries']:
+                    print naive_bayes(entry=entry, user=user)
                     entry['feed_title'] = feed['title']
                     hidden_entries = user.hidden_entries
                     if entry['_id'] not in hidden_entries:
@@ -112,7 +113,8 @@ def add_feed(user=None):
 @login_required
 def log_click(user=None):
     entry = db.Entry.get_from_id(ObjectId(request.args['entry_id']))
-    if bool(request.args['bad']):
+    is_bad = int(request.args['bad']) == 1
+    if is_bad:
         create_tokens(entry=entry, user=user, good=False)
 
         user.hidden_entries.append(entry['_id'])
@@ -124,7 +126,7 @@ def log_click(user=None):
         return redirect(entry.url)
 
 def entry_unique_tokens(entry):
-    tokens = nb.tokenize_title(entry.title) + nb.tokenize_title(entry.description)
+    tokens = nb.tokenize_title(entry['title']) + nb.tokenize_title(entry['description'])
     # assigns frequency value to each token:
     unique_tokens = {}
     for w in tokens:
@@ -208,7 +210,6 @@ def create_entry(*args, **kwargs):
             entry.description = parsed_entry.description
             entry.url         = parsed_entry.link
             entry.published   = datetime.datetime.fromtimestamp(mktime(parsed_entry.published_parsed))
-            print entry.title
             entry.save()
             return entry
     else:
@@ -227,16 +228,17 @@ def create_entry(*args, **kwargs):
             # can get pubdate through parsing... next time perhaps
 
 def naive_bayes(*args,**kwargs):
-    entry            = kwargs.get['entry']
-    user             = kwargs.get['user']
+    entry            = kwargs.get('entry')
+    user             = kwargs.get('user')
     unique_tokens    = entry_unique_tokens(entry)
     all_prob_good    = []
     all_prob_bad     = []
-    total_bad_count  = db.BadToken.find({"user":user}).count
-    total_good_count = db.GoodToken.find({"user":user}).count
-    for token in unique_tokens:
-        bad_token  = db.BadToken.find({"user":user,  "value":token["value"]})
-        good_token = db.GoodToken.find({"user":user, "value":token["value"]})
+    total_bad_count  = db.BadToken.find({"user":user}).count()
+    total_good_count = db.GoodToken.find({"user":user}).count()
+    for token, count in unique_tokens.iteritems():
+        utoken = unicode(token)
+        bad_token  = db.BadToken.find_one({"user":user,  "value": utoken})
+        good_token = db.GoodToken.find_one({"user":user, "value": utoken})
         prob_good  = 1.0
         prob_bad   = 1.0
         # find probability that token is good or bad based on frequency.
@@ -246,9 +248,13 @@ def naive_bayes(*args,**kwargs):
             prob_good = float(good_token.count+1)/float(total_good_count+1)
         all_prob_bad.append(prob_bad)
         all_prob_good.append(prob_good)
+    print all_prob_bad
+    print all_prob_good
     all_prob_bad       = float(reduce(operator.mul, all_prob_bad,  1))
     all_prob_good      = float(reduce(operator.mul, all_prob_good, 1))
-    total_probability  = all_prob_bad+all_prob_good
+    print all_prob_bad
+    print all_prob_good
+    total_probability  = all_prob_bad + all_prob_good
     all_prob_bad      /= total_probability
     all_prob_good     /= total_probability
     return {"bad":all_prob_bad, "good":all_prob_good}
