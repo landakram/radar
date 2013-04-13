@@ -5,6 +5,7 @@
         <div class="entry-container">
         {% for entry in entries %}
             <div class="item col1 c{{loop.index % 5}}">
+                <a class='delete hide_link' href="{{ url_for('log_click', bad=1, entry_id=entry._id) }}">&times;</a>
                 <h4 class="entry-title"><a href="{{ url_for('log_click', bad=0, entry_id=entry._id) }}">{{ entry.title }}</a></h4>
                 <div class='entry-info'>
                     <p class="entry-feed-title">{{ entry['feed_title']}}</p>
@@ -12,7 +13,6 @@
                     <div class="clear"></div>
                 </div>
                 <p class='entry-content'>{{ entry.description|striptags }}</p>
-                <a class='hide' href="{{ url_for('log_click', bad=1, entry_id=entry._id) }}">hide</a>
             </div>
         {% else %}
             <p>You don't have any feeds.</p>
@@ -25,10 +25,25 @@
 <script src="/static/js/vendor/jquery.masonry.min.js"></script>
 <script>
     $(function(){
-      $('.entry-container').masonry({
-      // options
+        $container = $('.entry-container')
+        $container.masonry({
+        // options
             itemSelector : '.item',
         });
+        // $('.item').click(function(e) {
+        //     e.stopPropagation();
+        //     var $this = $(this);
+        //     var $content = $this.find('.entry-content');
+        //     if($content.is(":visible")) {
+        //         $content.hide(function() {
+        //             $container.masonry({itemSelector: '.item'});
+        //         });
+        //     } else {
+        //         $content.show(function() {
+        //             $container.masonry({itemSelector: '.item'});
+        //         });
+        //     }
+        // });
     });
 </script>
 {% endblock %}
