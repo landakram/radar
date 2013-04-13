@@ -1,22 +1,23 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="row">
-    <div class="large-12 columns small-centered">
+<div class="row full">
         <div class="entry-container">
         {% for entry in entries %}
-            <div class="item col1">
+            <div class="item col1 c{{loop.index % 5}}">
                 <h4 class="entry-title"><a href="{{ url_for('log_click', bad=0, entry_id=entry._id) }}">{{ entry.title }}</a></h4>
-                <a href="{{ url_for('log_click', bad=1, entry_id=entry._id) }}">hide</a>
-                <p class="entry-feed-title">{{ entry['feed_title']}}</p>
-                <p class="entry-date">{{ entry.published.strftime('%A, %B %d, %I:%M%p') }}</p>
-                <p>{{ entry.description|striptags }}</p>
+                <div class='entry-info'>
+                    <p class="entry-feed-title">{{ entry['feed_title']}}</p>
+                    <p class="entry-date">{{ entry.published.strftime('%A, %B %d, %I:%M%p') }}</p>
+                    <div class="clear"></div>
+                </div>
+                <p class='entry-content'>{{ entry.description|striptags }}</p>
+                <a class='hide' href="{{ url_for('log_click', bad=1, entry_id=entry._id) }}">hide</a>
             </div>
         {% else %}
             <p>You don't have any feeds.</p>
         {% endfor %}
         </div>
-    </div>
 </div>
 {% endblock %}
 

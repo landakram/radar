@@ -1,32 +1,96 @@
 .item {
-  margin: 5px;
-  padding: 10px;
   /*background: #D8D5D2;*/
   line-height: 1.4em;
   float: left;
-  -webkit-border-radius: 10px;
-     -moz-border-radius: 10px;
-          border-radius: 10px;
-  border: 4px solid #D8D5D2;
+  padding: 20px;
+  width: 33%;
 }
 
-.col1 { width: 300px; }
+.c1 {
+  background: #ED81B3;
+}
 
-.entry-title {
+.c1.item .entry-info p {
+  color: #ED81B3;
+}
+
+.c2 {
+  background: #2BB2AC;
+}
+
+.c2.item .entry-info p {
+  color: #2BB2AC;
+}
+
+.c3 {
+  background: #B62C6A;
+}
+
+.c3.item .entry-info p {
+  color: #B62C6A;
+}
+
+.c4 {
+  background: #FFC354;
+}
+
+.c4.item .entry-info p {
+  color: #FFC354;
+}
+
+.c0 {
+  background: #90CE9F;
+}
+
+.c5.item .entry-info p {
+  color: #90CE9F;
+}
+
+
+.item h4.entry-title {
+    font-size: 1.2em;
+}
+
+.item h4.entry-title a {
     margin-bottom: 0;
+    color: white;
 }
-.entry-feed-title {
-    margin-top: 0px;
-    margin-bottom: 0px;
+
+.item .entry-info {
+  background: white;
+  padding: 10px;
 }
-.entry-date {
-    margin-top: 0px;
+
+.item .entry-info p {
+  margin-bottom: 0;
+  font-weight: bold;
+}
+
+.item .entry-info .entry-feed-title {
+  float: left;
+}
+
+.item .entry-info .entry-date {
+  float: right;
+}
+
+.item .entry-content {
+  padding: 20px;
+  margin-bottom: 0;
+  background: white;
+  color: #111;
+  font-weight: bold;
+  margin-top: 20px;
 }
 
 .top-bar {
   margin-bottom: 0;
 }
 
+.row.full {
+  margin: 0;
+  max-width: none;
+}
 .new-feed {
   height: 60px;
 }
