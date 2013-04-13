@@ -12,7 +12,7 @@
                     <p class="entry-date">{{ entry.published.strftime('%A, %B %d, %I:%M%p') }}</p>
                     <div class="clear"></div>
                 </div>
-                <p class='entry-content'>{{ entry.description|striptags }}</p>
+                <p class='entry-content'>{{ entry.description|striptags|truncate(length=600) }}</p>
             </div>
         {% else %}
             <p>You don't have any feeds.</p>
