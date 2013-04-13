@@ -20,6 +20,11 @@
                     <li class="toggle-topbar"><a href="#"><span>Menu</span></a></li>
                 </ul>
                 <section class="top-bar-section">
+                    <ul class="left">
+                        <li><a href="#" id="new-feed-toggle">Add feed</a></li>
+                    </ul>
+                </section>
+                <section class="top-bar-section">
                 <ul class="right">
                     <li class="divider hide-for-small"></li>
                     <li class="has-form">
@@ -32,13 +37,33 @@
                 </ul>
                 </section>
             </nav>
+
+            <div class="new-feed full" style="display:none;">
+                <form action="{{ url_for('add_feed') }}" method="POST">
+                    <input type="text" placeholder="http://feeds.feedburner.com/TechCrunch/" name="url">
+                    <input type="submit" class="button prefix" value="Add">
+                    <div class="clear"></div>
+                </form>
+            </div>
         {% block content %}
         {% endblock %}
 
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
         <script src="/static/js/foundation.min.js"></script>
         <script>
+            var newFeed = false;
             $(document).foundation();
+            $('#new-feed-toggle').click(function() {
+                if (!newFeed) {
+                    $('.new-feed').slideDown();
+                    $(this).text('Cancel');
+                    newFeed = true;
+                } else {
+                    $('.new-feed').slideUp();
+                    $(this).text('Add feed');
+                    newFeed = false;
+                }
+            });
         </script>
 
         {% block bodyscript %}
