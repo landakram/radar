@@ -10,6 +10,7 @@ import naive_bayes as nb
 from db import db
 import web_parsing as webp
 import datetime
+from naive_bayes import stopwords
 
 app = Flask(__name__)
 app.config.from_object('config')
@@ -30,6 +31,10 @@ def login_required(view):
 @login_required
 def add_good_keyword(user=None):
     token = unicode(request.form['keyword'])
+
+    if token in stopwords:
+        return jsonify(success=True)
+
     is_bad = int(request.form['bad']) == 1
     if is_bad:
         cls = db.BadToken
