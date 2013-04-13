@@ -1,6 +1,6 @@
 import functools
 
-from flask import Flask, render_template, request, session, redirect, url_for
+from flask import Flask, render_template, request, session, redirect, url_for, jsonify
 from flask.ext.mongokit import MongoKit
 from models import Entry, Feed, User, GoodToken, BadToken
 import requests
@@ -96,8 +96,23 @@ def add_feed(user=None):
 @login_required
 def log_click(user=None):
     entry = db.Entry.get_from_id(request.form['entry_id'])
-    create_tokens(entry = entry, user=user, good=True)
-    return redirect(entry.url)
+    if request.form['bad']:
+        create_tokens(entry = entry, user=user, good=False)
+        if request.method == 'GET':
+            return redirect(url_for('index'))
+        else:
+            return Response(response=jsonify({"success":True}),
+                    status=200,
+                    mimetype="application/json")
+    else:
+        create_tokens(entry = entry, user=user, good=True)
+        if request.method == 'GET':
+            return redirect(entry.url)
+        else:
+            return Response(response=jsonify({"success":True}),
+                    status=200,
+                    mimetype="application/json")
+    
 
 
 def create_tokens(*args,**kwargs):
