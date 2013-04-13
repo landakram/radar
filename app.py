@@ -4,6 +4,7 @@ from flask import Flask, render_template, request, session, redirect, url_for, j
 from flask.ext.mongokit import MongoKit
 from models import Entry, Feed, User, GoodToken, BadToken
 import requests
+import operator
 import json
 import feedparser as fp
 import datetime
@@ -126,8 +127,8 @@ def log_click(user=None):
     
 
 
-def create_tokens(*args,**kwargs):
-    tokens = nb.tokenize_title(kwargs.get('entry').title)+nb.tokenize_title(kwargs.get('entry').description)
+def entry_unique_tokens(entry):
+    tokens = nb.tokenize_title(entry.title)+nb.tokenize_title(entry.description)
     # assigns frequency value to each token:
     unique_tokens = {}
     for w in tokens:
@@ -135,6 +136,11 @@ def create_tokens(*args,**kwargs):
             unique_tokens[w]['count'] += 1
         else:
             unique_tokens[w] = {"count": 1, "value" : w}
+    return unique_tokens
+
+def create_tokens(*args,**kwargs):
+    # assigns frequency value to each token:
+    unique_tokens = entry_unique_tokens(kwargs.get('entry'))
     for token in unique_tokens:
         if kwargs.get('good') == True:
             # good token
@@ -223,6 +229,33 @@ def create_entry(*args,**kwargs):
             entry.save()
             return entry
             # can get pubdate through parsing... next time perhaps
+            
+def naive_bayes(*args,**kwargs):
+    entry            = kwargs.get['entry']
+    user             = kwargs.get['user']
+    unique_tokens    = entry_unique_tokens(entry)
+    all_prob_good    = []
+    all_prob_bad     = []
+    total_bad_count  = db.BadToken.find({"user":user}).count
+    total_good_count = db.GoodToken.find({"user":user}).count
+    for token in unique_tokens:
+        bad_token  = db.BadToken.find({"user":user,  "value":token["value"]})
+        good_token = db.GoodToken.find({"user":user, "value":token["value"]})
+        prob_good  = 1.0
+        prob_bad   = 1.0
+        # find probability that token is good or bad based on frequency.
+        if bad_token:
+            prob_bad  = float(bad_token.count+1)/float(total_bad_count+1)
+        if good_token:
+            prob_good = float(good_token.count+1)/float(total_good_count+1)
+        all_prob_bad.append(prob_bad)
+        all_prob_good.append(prob_good)
+    all_prob_bad       = float(reduce(operator.mul, all_prob_bad,  1))
+    all_prob_good      = float(reduce(operator.mul, all_prob_good, 1))
+    total_probability  = all_prob_bad+all_prob_good
+    all_prob_bad      /= total_probability
+    all_prob_good     /= total_probability
+    return {"bad":all_prob_bad, "good":all_prob_good}
 
 
 if __name__ == '__main__':
