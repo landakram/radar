@@ -30,6 +30,7 @@
                 <p class="entry-feed-title">{{ entry['feed_title']}}</p>
                 <p class="entry-date">{{ entry.published.strftime('%A, %B %d, %I:%M%p') }}</p>
                 <p>{{ entry.description|striptags }}</p>
+                <p>{{ entry.keywords }}</p>
             </div>
         {% else %}
             <p>You don't have any feeds.</p>
