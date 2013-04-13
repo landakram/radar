@@ -2,8 +2,21 @@
 
 {% block content %}
 <div class="row">
-    <div class="large-12 columns">
-        Here is some content.
+    <div class="large-8 columns small-centered">
+        <form action="{{ url_for('add_feed') }}" method="POST">
+            <fieldset>
+                <legend>Add Feed</legend>
+                    <label>Feed URL</label>
+                    <div class="row">
+                        <div class="small-10 columns">
+                            <input type="text" placeholder="http://feeds.feedburner.com/TechCrunch/" name="url">
+                        </div>
+                        <div class="small-2 columns">
+                            <input type="submit" class="button prefix" value="Add">
+                        </div>
+                    </div>
+            </fieldset>
+        </form>
     </div>
 </div>
 {% endblock %}
