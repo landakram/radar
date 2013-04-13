@@ -9,7 +9,6 @@ app.config.from_object('config')
 db = MongoKit(app)
 db.register([Entry, Feed, TotalCount, Token])
 
-
 @app.route('/')
 def index():
     entry = db.Entry()

@@ -2,6 +2,7 @@ from flask.ext.mongokit import Document
 
 import datetime
 
+
 class Entry(Document):
     __collection__ = 'entries'
     structure = {
@@ -10,7 +11,7 @@ class Entry(Document):
         'author': unicode,
         'description': unicode,
         'published': datetime.datetime,
-        'date_added': datetime.datetime
+        'date_added': datetime.datetime,
     }
     use_dot_notation = True
 
@@ -27,20 +28,31 @@ class Feed(Document):
     }
     use_dot_notation = True
 
-class TotalCount(Document):
-    __collection__ = 'counts'
+class User(Document):
     structure = {
-        'good': int,
-        'bad': int
+        'email': unicode,
+        'first_name': unicode,
+        'feeds': [Feed]
     }
     use_dot_notation = True
 
-class Token(Document):
-    __collection__ = 'tokens'
+class GoodToken(Document):
+    __collection__ = 'goodtokens'
+
     structure = {
         'value': unicode,
-        'good': int,
-        'bad': int
+        'count': int,
+        'user': User
+    }
+    use_dot_notation = True
+
+class BadToken(Document):
+    __collection__ = 'badtokens'
+
+    structure = {
+        'value': unicode,
+        'count': int,
+        'user': User
     }
     use_dot_notation = True
 
