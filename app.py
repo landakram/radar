@@ -9,6 +9,7 @@ from feeds import update_feed, create_feed
 import naive_bayes as nb
 from db import db
 import web_parsing as webp
+import datetime
 
 app = Flask(__name__)
 app.config.from_object('config')
@@ -44,7 +45,7 @@ def index():
 #                    hidden_entries = user.hidden_entries
 #                    if entry['_id'] not in hidden_entries:
                     entries.append(entry)
-            entries.sort(key=lambda e: e['published'])
+            entries.sort(key=lambda e: compute_score(user=user, entry=e), reverse=True)
 
         # strftime('%A, %B %d, %I:%M%p')
         return render_template('show_entries.html', user=user, entries=entries)
@@ -124,6 +125,18 @@ def log_click(user=None):
         create_tokens(entry=entry, user=user, good=True)
         return redirect(entry.url)
 
+
+def compute_score(*args,**kwargs):
+    time_norm = 1-float((kwargs.get('entry')["published"]-(datetime.datetime.now()-datetime.timedelta(days=1))).seconds)/86400.0
+    naive_bayes_result = naive_bayes(user=kwargs.get('user'),entry=kwargs.get('entry'))
+    bayes_norm = (naive_bayes_result["good"]-naive_bayes_result["bad"]) if naive_bayes_result["bad"]<0.5 else 0
+    sorted_important_words = sorted(naive_bayes_result["important_words"], key=lambda e: e["frequency"], reverse=True)
+    kwargs.get('entry')["keywords"] = ([w["value"] for w in sorted_important_words][:5]) if (sorted_important_words) else []
+    # kwargs.get('entry').save()
+    kwargs.get('user').save()
+    return (time_norm**2+bayes_norm**2)**0.5
+
+
 def entry_unique_tokens(entry):
     tokens = nb.tokenize_title(entry['title']) + nb.tokenize_title(entry['description'])
 #    tokens += nb.tokenize_title(webp.get_extract(url=entry['url']))
@@ -174,6 +187,7 @@ def naive_bayes(*args,**kwargs):
     unique_tokens    = entry_unique_tokens(entry)
     all_prob_good    = []
     all_prob_bad     = []
+    important_words  = []
     total_bad_count  = float(db.BadToken.find({"user_id": user._id}).count()) or 1.0
     total_good_count = float(db.GoodToken.find({"user_id": user._id}).count()) or 1.0
     for token, count in unique_tokens.iteritems():
@@ -189,6 +203,8 @@ def naive_bayes(*args,**kwargs):
         if good_prob == 0 and bad_prob == 0:
             continue
 
+        if good_prob>1.2*bad_prob:
+            important_words.append({"value":utoken,"frequency":good_prob})
         prob_token_bad = bad_prob / (good_prob + bad_prob)
         prob_token_good = good_prob / (good_prob + bad_prob)
 
@@ -196,9 +212,11 @@ def naive_bayes(*args,**kwargs):
         all_prob_bad.append(prob_token_bad)
     good_prod = reduce(op.mul, all_prob_good, 1)
     bad_prod = reduce(op.mul, all_prob_bad, 1)
+    if good_prod == bad_prod == 0:
+        return {"bad":0.5, "good":0.5, "important_words":important_words}
     total_bad = bad_prod / (good_prod + bad_prod)
     total_good = good_prod / (good_prod + bad_prod)
-    return {"bad":total_bad, "good":total_good}
+    return {"bad":total_bad, "good":total_good, "important_words":important_words}
 
 
 if __name__ == '__main__':
