@@ -11,6 +11,7 @@ import feedparser as fp
 import datetime
 from time import mktime
 import naive_bayes as nb
+import web_parsing as webp
 
 app = Flask(__name__)
 app.config.from_object('config')
@@ -127,6 +128,8 @@ def log_click(user=None):
 
 def entry_unique_tokens(entry):
     tokens = nb.tokenize_title(entry['title']) + nb.tokenize_title(entry['description'])
+    tokens += nb.tokenize_title(webp.get_extract(entry['url']))
+    #tokens = nb.tokenize_title(entry.title) + nb.tokenize_title(entry.description)
     # assigns frequency value to each token:
     unique_tokens = {}
     for w in tokens:
