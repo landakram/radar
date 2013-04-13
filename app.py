@@ -128,7 +128,7 @@ def log_click(user=None):
 
 def entry_unique_tokens(entry):
     tokens = nb.tokenize_title(entry['title']) + nb.tokenize_title(entry['description'])
-    tokens += nb.tokenize_title(webp.get_extract(entry['url']))
+    tokens += nb.tokenize_title(webp.get_extract(url=entry['url']))
     #tokens = nb.tokenize_title(entry.title) + nb.tokenize_title(entry.description)
     # assigns frequency value to each token:
     unique_tokens = {}
