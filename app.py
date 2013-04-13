@@ -32,10 +32,19 @@ def index():
     user_id = session.get('user_id')
     if not user_id:
         user = None
+        return render_template('index.html')
     else:
         user = db.User.get_from_id(user_id)
+        entries = []
+        for feed in user.feeds:
+            for entry in feed['entries']:
+                entry['feed_title'] = feed['title']
+                entries.append(entry)
+        entries.sort(key=lambda e: e['published'])
 
-    return render_template('index.html', user=user)
+        # strftime('%A, %B %d, %I:%M%p')
+        return render_template('show_entries.html', user=user, entries=entries)
+
 
 @app.route('/logout')
 def logout():
@@ -90,6 +99,8 @@ def test(user=None):
 def add_feed(user=None):
     feed_url = request.form['url']
     feed = create_feed(url=feed_url)
+    user.feeds.append(feed)
+    user.save()
     return redirect(url_for('index'))
 
 
@@ -189,7 +200,7 @@ def create_entry(*args,**kwargs):
     # or by inputing title, desc, url...
     parsed_entry = kwargs.get('parser')
     if parsed_entry:
-        entry = db.Entry.find_one({'url':parsed_entry.url})
+        entry = db.Entry.find_one({'url': parsed_entry.link})
         if entry:
             return entry
         else:
@@ -197,8 +208,11 @@ def create_entry(*args,**kwargs):
             entry.date_added  = datetime.datetime.now()
             entry.title       = parsed_entry.title
             entry.description = parsed_entry.description
-            entry.url         = parsed_entry.url
+            entry.url         = parsed_entry.link
             entry.published   = datetime.datetime.fromtimestamp(mktime(parsed_entry.published_parsed))
+            print '=' * 80
+            print entry.title
+            print '=' * 80
             entry.save()
             return entry
     else:

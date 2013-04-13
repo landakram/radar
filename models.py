@@ -2,7 +2,6 @@ from flask.ext.mongokit import Document
 
 import datetime
 
-
 class Entry(Document):
     __collection__ = 'entries'
     structure = {
@@ -14,8 +13,6 @@ class Entry(Document):
         'date_added': datetime.datetime,
     }
     use_dot_notation = True
-
-
 
 class Feed(Document):
     __collection__ = 'feeds'
@@ -36,7 +33,7 @@ class User(Document):
         'email': unicode,
         'first_name': unicode,
         'feeds': [Feed],
-        'clef_id': int
+        'clef_id': long
     }
 
     use_dot_notation = True
