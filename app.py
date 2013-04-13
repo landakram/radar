@@ -1,6 +1,6 @@
 import functools
 
-from flask import Flask, render_template, request, session, redirect, url_for
+from flask import Flask, render_template, request, session, redirect, url_for, jsonify
 from flask.ext.mongokit import MongoKit
 from models import Entry, Feed, User, GoodToken, BadToken
 import requests
@@ -8,6 +8,7 @@ import json
 import feedparser as fp
 import datetime
 from time import mktime
+import naive_bayes as nb
 
 app = Flask(__name__)
 app.config.from_object('config')
@@ -100,6 +101,66 @@ def add_feed(user=None):
     user.feeds.append(feed)
     user.save()
     return redirect(url_for('index'))
+
+
+@app.route('/log_click', methods=['POST','GET'])
+@login_required
+def log_click(user=None):
+    entry = db.Entry.get_from_id(request.form['entry_id'])
+    if request.form['bad']:
+        create_tokens(entry = entry, user=user, good=False)
+        if request.method == 'GET':
+            return redirect(url_for('index'))
+        else:
+            return Response(response=jsonify({"success":True}),
+                    status=200,
+                    mimetype="application/json")
+    else:
+        create_tokens(entry = entry, user=user, good=True)
+        if request.method == 'GET':
+            return redirect(entry.url)
+        else:
+            return Response(response=jsonify({"success":True}),
+                    status=200,
+                    mimetype="application/json")
+    
+
+
+def create_tokens(*args,**kwargs):
+    tokens = nb.tokenize_title(kwargs.get('entry').title)+nb.tokenize_title(kwargs.get('entry').description)
+    # assigns frequency value to each token:
+    unique_tokens = {}
+    for w in tokens:
+        if unique_tokens[w]:
+            unique_tokens[w]['count'] += 1
+        else:
+            unique_tokens[w] = {"count": 1, "value" : w}
+    for token in unique_tokens:
+        if kwargs.get('good') == True:
+            # good token
+            g_token = db.GoodToken.find({"user": user, "value":token["value"]})
+            if g_token:
+                g_token.value = g_token.value+token["count"]
+                g_token.save()
+            else:
+                g_token = db.GoodToken()
+                g_token.value = unicode(token["value"])
+                g_token.count = token["count"]
+                g_token.user  = user
+                g_token.save()
+        else:
+            # bad token
+            b_token = db.BadToken.find({"user": user, "value":token["value"]})
+            if b_token:
+                b_token.value = b_token.value+token["count"]
+                b_token.save()
+            else:
+                b_token = db.BadToken()
+                b_token.value = unicode(token["value"])
+                b_token.count = token["count"]
+                b_token.user  = user
+                b_token.save()
+    return unique_tokens
 
 
 def create_feed(*args,**kwargs):
