@@ -26,6 +26,25 @@ def login_required(view):
         return view(user=user, *args, **kwargs)
     return decorated_view
 
+@app.route('/keyword', methods=['POST'])
+@login_required
+def add_good_keyword(user=None):
+    token = unicode(request.form['keyword'])
+    is_bad = int(request.form['bad']) == 1
+    if is_bad:
+        cls = db.BadToken
+    else:
+        cls = db.GoodToken
+    g_token = cls.find_one({"user_id": user._id, "value": token})
+    if not g_token:
+        g_token = cls()
+        g_token['value'] = token
+        g_token['count'] = 0
+        g_token['user_id'] = user._id
+
+    g_token['count'] += 1
+    g_token.save()
+
 @app.route('/')
 def index():
     user_id = session.get('user_id')
