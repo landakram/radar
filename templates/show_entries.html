@@ -13,6 +13,9 @@
                     <div class="clear"></div>
                 </div>
                 <p class='entry-content'>{{ entry.description|striptags|truncate(length=600) }}</p>
+                {% for keyword in entry.keywords %}
+                    <span class="keyword">{{keyword}}</span>
+                {% endfor %}
             </div>
         {% else %}
             <p>You don't have any feeds.</p>

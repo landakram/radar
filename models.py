@@ -12,6 +12,7 @@ class Entry(Document):
         'description': unicode,
         'published': datetime.datetime,
         'date_added': datetime.datetime,
+        'keywords':[unicode]
     }
     use_dot_notation = True
 
