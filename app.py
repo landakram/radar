@@ -5,7 +5,7 @@ from flask.ext.mongokit import MongoKit
 from mongokit import ObjectId
 from models import Entry, Feed, User, GoodToken, BadToken
 import requests
-import operator
+import operator as op
 import json
 import feedparser as fp
 import datetime
@@ -42,9 +42,9 @@ def index():
                 for entry in feed['entries']:
                     print naive_bayes(entry=entry, user=user)
                     entry['feed_title'] = feed['title']
-                    hidden_entries = user.hidden_entries
-                    if entry['_id'] not in hidden_entries:
-                        entries.append(entry)
+#                    hidden_entries = user.hidden_entries
+#                    if entry['_id'] not in hidden_entries:
+                    entries.append(entry)
             entries.sort(key=lambda e: e['published'])
 
         # strftime('%A, %B %d, %I:%M%p')
@@ -144,26 +144,26 @@ def create_tokens(*args,**kwargs):
         utoken = unicode(token)
         if kwargs.get('good') == True:
             # good token
-            g_token = db.GoodToken.find_one({"user": user, "value": utoken})
+            g_token = db.GoodToken.find_one({"user_id": user._id, "value": utoken})
             if g_token:
                 g_token.count += count
             else:
                 g_token = db.GoodToken()
                 g_token.value = utoken
                 g_token.count = count
-                g_token.user  = user
+                g_token.user_id  = user._id
 
             g_token.save()
         else:
             # bad token
-            b_token = db.BadToken.find_one({"user": user, "value": utoken})
+            b_token = db.BadToken.find_one({"user_id": user._id, "value": utoken})
             if b_token:
                 b_token.count += count
             else:
                 b_token = db.BadToken()
                 b_token.value = utoken
                 b_token.count = count
-                b_token.user  = user
+                b_token.user_id  = user._id
 
             b_token.save()
     return unique_tokens
@@ -233,31 +233,32 @@ def naive_bayes(*args,**kwargs):
     unique_tokens    = entry_unique_tokens(entry)
     all_prob_good    = []
     all_prob_bad     = []
-    total_bad_count  = db.BadToken.find({"user":user}).count()
-    total_good_count = db.GoodToken.find({"user":user}).count()
+    total_bad_count  = float(db.BadToken.find({"user_id": user._id}).count()) or 1.0
+    total_good_count = float(db.GoodToken.find({"user_id": user._id}).count()) or 1.0
     for token, count in unique_tokens.iteritems():
         utoken = unicode(token)
-        bad_token  = db.BadToken.find_one({"user":user,  "value": utoken})
-        good_token = db.GoodToken.find_one({"user":user, "value": utoken})
-        prob_good  = 1.0
-        prob_bad   = 1.0
-        # find probability that token is good or bad based on frequency.
-        if bad_token:
-            prob_bad  = float(bad_token.count+1)/float(total_bad_count+1)
-        if good_token:
-            prob_good = float(good_token.count+1)/float(total_good_count+1)
-        all_prob_bad.append(prob_bad)
-        all_prob_good.append(prob_good)
-    print all_prob_bad
-    print all_prob_good
-    all_prob_bad       = float(reduce(operator.mul, all_prob_bad,  1))
-    all_prob_good      = float(reduce(operator.mul, all_prob_good, 1))
-    print all_prob_bad
-    print all_prob_good
-    total_probability  = all_prob_bad + all_prob_good
-    all_prob_bad      /= total_probability
-    all_prob_good     /= total_probability
-    return {"bad":all_prob_bad, "good":all_prob_good}
+
+        bad_token  = db.BadToken.find_one({"user_id": user._id,  "value": utoken})
+        good_token = db.GoodToken.find_one({"user_id": user._id, "value": utoken})
+
+        good_count = float(good_token.count if good_token else 0.0)
+        bad_count = float(bad_token.count if bad_token else 0.0)
+        good_prob = min(1.0, good_count / total_good_count)
+        bad_prob = min(1.0, bad_count / total_bad_count)
+        if good_prob == 0 and bad_prob == 0:
+            continue
+
+        prob_token_bad = bad_prob / (good_prob + bad_prob)
+        prob_token_good = good_prob / (good_prob + bad_prob)
+
+        all_prob_good.append(prob_token_good)
+        all_prob_bad.append(prob_token_bad)
+    good_prod = reduce(op.mul, all_prob_good, 1)
+    bad_prod = reduce(op.mul, all_prob_bad, 1)
+    total_bad = bad_prod / (good_prod + bad_prod)
+    total_good = good_prod / (good_prod + bad_prod)
+    print entry['title']
+    return {"bad":total_bad, "good":total_good}
 
 
 if __name__ == '__main__':

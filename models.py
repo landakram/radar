@@ -46,7 +46,7 @@ class GoodToken(Document):
     structure = {
         'value': unicode,
         'count': int,
-        'user': User
+        'user_id': ObjectId
     }
     use_dot_notation = True
 
@@ -56,7 +56,7 @@ class BadToken(Document):
     structure = {
         'value': unicode,
         'count': int,
-        'user': User
+        'user_id': ObjectId
     }
     use_dot_notation = True
 
