@@ -1,9 +1,12 @@
 import nltk as nl
 # import httplib2
 # import beautifulsoup as bs
+stopwords = set()
+with open('english_stopwords.txt') as f:
+    for line in f:
+        stopwords.add(line.strip())
 
-stopwords = nl.corpus.stopwords.words('english')
-stopwords = stopwords + [",",";",":","?","=","+","."]
+stopwords |= set([",",";",":","?","=","+","."])
 
 def tokenize_title (title):
 	tokens = nl.tokenize.word_tokenize(title) #nl.tag.pos_tag(nl.tokenize.word_tokenize(title))

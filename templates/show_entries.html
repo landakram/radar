@@ -25,7 +25,8 @@
         <div class="entry-container">
         {% for entry in entries %}
             <div class="item col1">
-                <h4 class="entry-title"><a href="{{ entry.url }}">{{ entry.title }}</a></h4>
+                <h4 class="entry-title"><a href="{{ url_for('log_click', bad=0, entry_id=entry._id) }}">{{ entry.title }}</a></h4>
+                <a href="{{ url_for('log_click', bad=1, entry_id=entry._id) }}">hide</a>
                 <p class="entry-feed-title">{{ entry['feed_title']}}</p>
                 <p class="entry-date">{{ entry.published.strftime('%A, %B %d, %I:%M%p') }}</p>
                 <p>{{ entry.description|striptags }}</p>

@@ -1,7 +1,8 @@
 import functools
 
-from flask import Flask, render_template, request, session, redirect, url_for, jsonify
+from flask import Flask, render_template, request, session, redirect, url_for, jsonify, Response
 from flask.ext.mongokit import MongoKit
+from mongokit import ObjectId
 from models import Entry, Feed, User, GoodToken, BadToken
 import requests
 import operator
@@ -36,11 +37,14 @@ def index():
     else:
         user = db.User.get_from_id(user_id)
         entries = []
-        for feed in user.feeds:
-            for entry in feed['entries']:
-                entry['feed_title'] = feed['title']
-                entries.append(entry)
-        entries.sort(key=lambda e: e['published'])
+        if user:
+            for feed in user.feeds:
+                for entry in feed['entries']:
+                    entry['feed_title'] = feed['title']
+                    hidden_entries = user.hidden_entries
+                    if entry['_id'] not in hidden_entries:
+                        entries.append(entry)
+            entries.sort(key=lambda e: e['published'])
 
         # strftime('%A, %B %d, %I:%M%p')
         return render_template('show_entries.html', user=user, entries=entries)
@@ -75,12 +79,12 @@ def login():
     user_info = json_response['info']
 
     # Look up the user
-    user = db.User.find_one({'clef_id': user_info['id']})
+    user = db.User.find_one({'clef_id': long(user_info['id'])})
     if not user:
         user = db.User()
         user.email = user_info['email']
         user.first_name = user_info['first_name']
-        user.clef_id = user_info['id']
+        user.clef_id = long(user_info['id'])
         user.feeds = []
 
         user.save()
@@ -104,72 +108,66 @@ def add_feed(user=None):
     return redirect(url_for('index'))
 
 
-@app.route('/log_click', methods=['POST','GET'])
+@app.route('/log_click', methods=['GET'])
 @login_required
 def log_click(user=None):
-    entry = db.Entry.get_from_id(request.form['entry_id'])
-    if request.form['bad']:
-        create_tokens(entry = entry, user=user, good=False)
-        if request.method == 'GET':
-            return redirect(url_for('index'))
-        else:
-            return Response(response=jsonify({"success":True}),
-                    status=200,
-                    mimetype="application/json")
-    else:
-        create_tokens(entry = entry, user=user, good=True)
-        if request.method == 'GET':
-            return redirect(entry.url)
-        else:
-            return Response(response=jsonify({"success":True}),
-                    status=200,
-                    mimetype="application/json")
-    
+    entry = db.Entry.get_from_id(ObjectId(request.args['entry_id']))
+    if bool(request.args['bad']):
+        create_tokens(entry=entry, user=user, good=False)
 
+        user.hidden_entries.append(entry['_id'])
+        user.save()
+
+        return redirect(url_for('index'))
+    else:
+        create_tokens(entry=entry, user=user, good=True)
+        return redirect(entry.url)
 
 def entry_unique_tokens(entry):
-    tokens = nb.tokenize_title(entry.title)+nb.tokenize_title(entry.description)
+    tokens = nb.tokenize_title(entry.title) + nb.tokenize_title(entry.description)
     # assigns frequency value to each token:
     unique_tokens = {}
     for w in tokens:
-        if unique_tokens[w]:
-            unique_tokens[w]['count'] += 1
+        if w in unique_tokens:
+            unique_tokens[w] += 1
         else:
-            unique_tokens[w] = {"count": 1, "value" : w}
+            unique_tokens[w] = 1
     return unique_tokens
 
 def create_tokens(*args,**kwargs):
     # assigns frequency value to each token:
     unique_tokens = entry_unique_tokens(kwargs.get('entry'))
-    for token in unique_tokens:
+    user = kwargs.get('user')
+    for token, count in unique_tokens.iteritems():
+        utoken = unicode(token)
         if kwargs.get('good') == True:
             # good token
-            g_token = db.GoodToken.find({"user": user, "value":token["value"]})
+            g_token = db.GoodToken.find_one({"user": user, "value": utoken})
             if g_token:
-                g_token.value = g_token.value+token["count"]
-                g_token.save()
+                g_token.count += count
             else:
                 g_token = db.GoodToken()
-                g_token.value = unicode(token["value"])
-                g_token.count = token["count"]
+                g_token.value = utoken
+                g_token.count = count
                 g_token.user  = user
-                g_token.save()
+
+            g_token.save()
         else:
             # bad token
-            b_token = db.BadToken.find({"user": user, "value":token["value"]})
+            b_token = db.BadToken.find_one({"user": user, "value": utoken})
             if b_token:
-                b_token.value = b_token.value+token["count"]
-                b_token.save()
+                b_token.count += count
             else:
                 b_token = db.BadToken()
-                b_token.value = unicode(token["value"])
-                b_token.count = token["count"]
+                b_token.value = utoken
+                b_token.count = count
                 b_token.user  = user
-                b_token.save()
+
+            b_token.save()
     return unique_tokens
 
 
-def create_feed(*args,**kwargs):
+def create_feed(*args, **kwargs):
     # parse the url from the arguments
     url              = kwargs.get('url')
     found_feed       = fp.parse(url)
@@ -195,7 +193,7 @@ def create_feed(*args,**kwargs):
         feed.save()
         return feed
 
-def create_entry(*args,**kwargs):
+def create_entry(*args, **kwargs):
     # creates a new entry either from parse data,
     # or by inputing title, desc, url...
     parsed_entry = kwargs.get('parser')
@@ -210,9 +208,7 @@ def create_entry(*args,**kwargs):
             entry.description = parsed_entry.description
             entry.url         = parsed_entry.link
             entry.published   = datetime.datetime.fromtimestamp(mktime(parsed_entry.published_parsed))
-            print '=' * 80
             print entry.title
-            print '=' * 80
             entry.save()
             return entry
     else:
@@ -229,7 +225,7 @@ def create_entry(*args,**kwargs):
             entry.save()
             return entry
             # can get pubdate through parsing... next time perhaps
-            
+
 def naive_bayes(*args,**kwargs):
     entry            = kwargs.get['entry']
     user             = kwargs.get['user']

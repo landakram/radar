@@ -1,4 +1,5 @@
 from flask.ext.mongokit import Document
+from mongokit import Set, ObjectId
 
 import datetime
 
@@ -33,7 +34,8 @@ class User(Document):
         'email': unicode,
         'first_name': unicode,
         'feeds': [Feed],
-        'clef_id': long
+        'clef_id': long,
+        'hidden_entries': [ObjectId]
     }
 
     use_dot_notation = True
