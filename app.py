@@ -62,9 +62,9 @@ def index():
 
                 for entry in feed['entries']:
                     entry['feed_title'] = feed['title']
-#                    hidden_entries = user.hidden_entries
-#                    if entry['_id'] not in hidden_entries:
-                    entries.append(entry)
+                    hidden_entries = user.hidden_entries
+                    if entry['_id'] not in hidden_entries:
+                        entries.append(entry)
             entries.sort(key=lambda e: compute_score(user=user, entry=e), reverse=True)
 
         # strftime('%A, %B %d, %I:%M%p')
