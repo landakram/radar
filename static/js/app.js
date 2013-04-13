@@ -23,9 +23,9 @@ $( function () {
 		})
 	});
 
-	function like_keyword(e) {
+	function like_keyword(e, text) {
 		var keyword = $(this),
-			params = {keyword: keyword.text(), bad: 0};
+			params = {keyword: text, bad: 0};
 		$.post('/keyword', params, function (response) {
 			// console.log("Hello");
 			var heart_div = $("<div><img src='"+heart+"'></div>").appendTo($("body"));
@@ -59,7 +59,7 @@ $( function () {
 		$(this).html(keywordable_elements.join(" "));
 		$(this).find("span").each( function () {
 			$(this).click( function (e) {
-				like_keyword(e);
+				like_keyword(e, $(this).text());
 			});
 		});
 	});
@@ -68,7 +68,7 @@ $( function () {
 	$(".keyword").each( function () {
 
 		$(this).click( function (e) {
-			like_keyword(e);
+			like_keyword(e, $(this).text());
 		});
 		
 	});
