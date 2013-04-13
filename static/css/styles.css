@@ -22,3 +22,30 @@
 .entry-date {
     margin-top: 0px;
 }
+
+.top-bar {
+  margin-bottom: 0;
+}
+
+.new-feed {
+  height: 60px;
+}
+.new-feed input {
+  margin: 0;
+}
+.new-feed input[type=text] {
+  width: 90%;
+  float: left;
+  height: 60px;
+  font-size: 1.9em;
+}
+.new-feed input[type=submit] {
+  width: 10%;
+  float: left;
+  height: 60px;
+  font-size: 1.9em;
+}
+
+.clear {
+  clear: both;
+}

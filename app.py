@@ -41,7 +41,6 @@ def index():
         if user:
             for feed in user.feeds:
                 for entry in feed['entries']:
-                    print naive_bayes(entry=entry, user=user)
                     entry['feed_title'] = feed['title']
 #                    hidden_entries = user.hidden_entries
 #                    if entry['_id'] not in hidden_entries:
