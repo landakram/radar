@@ -16,6 +16,7 @@ class Entry(Document):
     use_dot_notation = True
 
 
+
 class Feed(Document):
     __collection__ = 'feeds'
     structure = {

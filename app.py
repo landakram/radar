@@ -5,6 +5,9 @@ from flask.ext.mongokit import MongoKit
 from models import Entry, Feed, User, GoodToken, BadToken
 import requests
 import json
+import feedparser as fp
+import datetime
+from time import mktime
 
 app = Flask(__name__)
 app.config.from_object('config')
@@ -79,6 +82,72 @@ def login():
 def test(user=None):
     entries = db.Entry.find()
     return repr([entry for entry in entries])
+
+@app.route('/feed', methods=['POST'])
+@login_required
+def add_feed(user=None):
+    feed_url = request.form['url']
+    feed = create_feed(url=feed_url)
+    return redirect(url_for('index'))
+
+
+def create_feed(*args,**kwargs):
+    # parse the url from the arguments
+    url              = kwargs.get('url')
+    found_feed       = fp.parse(url)
+    feed = db.Feed.find_one({'url' : found_feed.url})
+    if feed:
+        return feed
+    else:
+        # parsed feed creates new feed object if feed does
+        # not exist yet.
+        feed             = db.Feed()
+        feed.title       = found_feed.feed.title
+        feed.url         = found_feed.url
+        feed.description = found_feed.feed.description
+        feed.published   = datetime.datetime.fromtimestamp(mktime(found_feed.feed.updated_parsed))
+        feed.date_added  = datetime.datetime.now()
+        feed.entries     = []
+        # iterate through entries (this method should)
+        # be isolated to allow updating of feeds later on
+        for found_entry in found_feed.entries:
+            entry = create_entry(parser=found_entry)
+            feed.entries.append(entry)
+
+        feed.save()
+        return feed
+
+def create_entry(*args,**kwargs):
+    # creates a new entry either from parse data,
+    # or by inputing title, desc, url...
+    parsed_entry = kwargs.get('parser')
+    if parsed_entry:
+        entry = db.Entry.find_one({'url':parsed_entry.url})
+        if entry:
+            return entry
+        else:
+            entry             = db.Entry()
+            entry.date_added  = datetime.datetime.now()
+            entry.title       = parsed_entry.title
+            entry.description = parsed_entry.description
+            entry.url         = parsed_entry.url
+            entry.published   = datetime.datetime.fromtimestamp(mktime(parsed_entry.published_parsed))
+            entry.save()
+            return entry
+    else:
+        entry = db.Entry.find_one({'url':kwargs.get('url')})
+        if entry:
+            return entry
+        else:
+            entry             = db.Entry()
+            entry.date_added  = datetime.datetime.now()
+            entry.title       = kwargs.get('title')
+            entry.url         = kwargs.get('url')
+            entry.description = kwargs.get('description')
+            entry.published   = kwargs.get('published')
+            entry.save()
+            return entry
+            # can get pubdate through parsing... next time perhaps
 
 
 if __name__ == '__main__':
