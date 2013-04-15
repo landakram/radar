@@ -5,7 +5,6 @@ from time import mktime
 
 def update_feed(feed):
     recent_entry = feed['entries'][0]
-    print (datetime.datetime.now() - recent_entry['date_added']).seconds
     if (datetime.datetime.now() - recent_entry['date_added']).seconds < 60*5:
         return
 
@@ -14,12 +13,12 @@ def update_feed(feed):
 
     d = feedparser.parse(feed['url'])
     entries = d.entries
-    filtered_entries = entries
 
-    for i, entry in enumerate(entries):
+    filtered_entries = []
+    for entry in entries:
         if entry['link'] == recent_entry_url:
-            filtered_entries = filtered_entries[:i]
             break
+        filtered_entries.append(entry)
 
     filtered = [create_entry(parser=e) for e in filtered_entries]
     # Cut off at 100 entries
@@ -52,6 +51,7 @@ def create_feed(*args, **kwargs):
 
         feed.save()
         return feed
+
 
 def create_entry(*args, **kwargs):
     # creates a new entry either from parse data,

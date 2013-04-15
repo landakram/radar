@@ -1,16 +1,15 @@
 import functools
 
+import datetime
+import requests
+import json
+
 from flask import Flask, render_template, request, session, redirect, url_for, jsonify
 from mongokit import ObjectId
-import requests
-import operator as op
-import json
-from feeds import update_feed, create_feed
-import naive_bayes as nb
+
 from db import db
-import web_parsing as webp
-import datetime
-from naive_bayes import stopwords
+from feeds import update_feed, create_feed
+from naive_bayes import stopwords, create_tokens, naive_bayes
 
 app = Flask(__name__)
 app.config.from_object('config')
@@ -27,6 +26,7 @@ def login_required(view):
         return view(user=user, *args, **kwargs)
     return decorated_view
 
+
 @app.route('/keyword', methods=['POST'])
 @login_required
 def add_good_keyword(user=None):
@@ -37,12 +37,12 @@ def add_good_keyword(user=None):
 
     is_bad = int(request.form['bad']) == 1
     if is_bad:
-        cls = db.BadToken
+        TokenClass = db.BadToken
     else:
-        cls = db.GoodToken
-    g_token = cls.find_one({"user_id": user._id, "value": token})
+        TokenClass = db.GoodToken
+    g_token = TokenClass.find_one({"user_id": user._id, "value": token})
     if not g_token:
-        g_token = cls()
+        g_token = TokenClass()
         g_token['value'] = token
         g_token['count'] = 0
         g_token['user_id'] = user._id
@@ -51,28 +51,29 @@ def add_good_keyword(user=None):
     g_token.save()
     return jsonify(success=True)
 
+
 @app.route('/')
 def index():
     user_id = session.get('user_id')
     if not user_id:
-        user = None
         return render_template('index.html')
     else:
         user = db.User.get_from_id(user_id)
+        if not user:
+            return render_template('index.html')
+
         entries = []
-        if user:
-            for feed in user.feeds:
-                update_feed(feed)
-                user.save()
+        for feed in user.feeds:
+            update_feed(feed)
+            user.save()
 
-                for entry in feed['entries']:
-                    entry['feed_title'] = feed['title']
-                    hidden_entries = user.hidden_entries
-                    if entry['_id'] not in hidden_entries:
-                        entries.append(entry)
-            entries.sort(key=lambda e: compute_score(user=user, entry=e), reverse=True)
+            for entry in feed['entries']:
+                entry['feed_title'] = feed['title']
+                hidden_entries = user.hidden_entries
+                if entry['_id'] not in hidden_entries:
+                    entries.append(entry)
+        entries.sort(key=lambda e: compute_score(user=user, entry=e), reverse=True)
 
-        # strftime('%A, %B %d, %I:%M%p')
         return render_template('show_entries.html', user=user, entries=entries)
 
 
@@ -80,6 +81,7 @@ def index():
 def logout():
     session.pop('user_id')
     return redirect(url_for('index'))
+
 
 @app.route('/login')
 def login():
@@ -124,6 +126,7 @@ def test(user=None):
     entries = db.Entry.find()
     return repr([entry for entry in entries])
 
+
 @app.route('/feed', methods=['POST'])
 @login_required
 def add_feed(user=None):
@@ -160,88 +163,6 @@ def compute_score(*args,**kwargs):
     # kwargs.get('entry').save()
     kwargs.get('user').save()
     return (time_norm**2+bayes_norm**2)**0.5
-
-
-def entry_unique_tokens(entry):
-    tokens = nb.tokenize_title(entry['title']) + nb.tokenize_title(entry['description'])
-#    tokens += nb.tokenize_title(webp.get_extract(url=entry['url']))
-    # assigns frequency value to each token:
-    unique_tokens = {}
-    for w in tokens:
-        if w in unique_tokens:
-            unique_tokens[w] += 1
-        else:
-            unique_tokens[w] = 1
-    return unique_tokens
-
-def create_tokens(*args,**kwargs):
-    # assigns frequency value to each token:
-    unique_tokens = entry_unique_tokens(kwargs.get('entry'))
-    user = kwargs.get('user')
-    for token, count in unique_tokens.iteritems():
-        utoken = unicode(token)
-        if kwargs.get('good') == True:
-            # good token
-            g_token = db.GoodToken.find_one({"user_id": user._id, "value": utoken})
-            if g_token:
-                g_token.count += count
-            else:
-                g_token = db.GoodToken()
-                g_token.value = utoken
-                g_token.count = count
-                g_token.user_id  = user._id
-
-            g_token.save()
-        else:
-            # bad token
-            b_token = db.BadToken.find_one({"user_id": user._id, "value": utoken})
-            if b_token:
-                b_token.count += count
-            else:
-                b_token = db.BadToken()
-                b_token.value = utoken
-                b_token.count = count
-                b_token.user_id  = user._id
-
-            b_token.save()
-    return unique_tokens
-
-def naive_bayes(*args,**kwargs):
-    entry            = kwargs.get('entry')
-    user             = kwargs.get('user')
-    unique_tokens    = entry_unique_tokens(entry)
-    all_prob_good    = []
-    all_prob_bad     = []
-    important_words  = []
-    total_bad_count  = float(db.BadToken.find({"user_id": user._id}).count()) or 1.0
-    total_good_count = float(db.GoodToken.find({"user_id": user._id}).count()) or 1.0
-    for token, count in unique_tokens.iteritems():
-        utoken = unicode(token)
-
-        bad_token  = db.BadToken.find_one({"user_id": user._id,  "value": utoken})
-        good_token = db.GoodToken.find_one({"user_id": user._id, "value": utoken})
-
-        good_count = float(good_token.count if good_token else 0.0)
-        bad_count = float(bad_token.count if bad_token else 0.0)
-        good_prob = min(1.0, good_count / total_good_count)
-        bad_prob = min(1.0, bad_count / total_bad_count)
-        if good_prob == 0 and bad_prob == 0:
-            continue
-
-        if good_prob>1.2*bad_prob:
-            important_words.append({"value":utoken,"frequency":good_prob})
-        prob_token_bad = bad_prob / (good_prob + bad_prob)
-        prob_token_good = good_prob / (good_prob + bad_prob)
-
-        all_prob_good.append(prob_token_good)
-        all_prob_bad.append(prob_token_bad)
-    good_prod = reduce(op.mul, all_prob_good, 1)
-    bad_prod = reduce(op.mul, all_prob_bad, 1)
-    if good_prod == bad_prod == 0:
-        return {"bad":0.5, "good":0.5, "important_words":important_words}
-    total_bad = bad_prod / (good_prod + bad_prod)
-    total_good = good_prod / (good_prod + bad_prod)
-    return {"bad":total_bad, "good":total_good, "important_words":important_words}
 
 
 if __name__ == '__main__':

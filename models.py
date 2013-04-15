@@ -1,7 +1,7 @@
-from flask.ext.mongokit import Document
-from mongokit import Set, ObjectId
-
 import datetime
+
+from flask.ext.mongokit import Document
+from mongokit import ObjectId
 
 class Entry(Document):
     __collection__ = 'entries'
